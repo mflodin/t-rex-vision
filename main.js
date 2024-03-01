@@ -1,18 +1,24 @@
 import MersenneTwister from "./mersenne-twister.js";
 
-const svtLogoScale = 20;
-const MAX_VALUE_32_BIT = -1 >> 0;
-
 let shouldAnimate = true;
 let shouldResetScaleOnly = true;
-let coloredNoise = true;
+let coloredNoise = false;
 let tick = 0;
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const canvasWidth = canvas.getAttribute("width");
-const canvasHeight = canvas.getAttribute("height");
 
+// this gets the width and height "from the css" where we have set both to 100%
+const { height, width } = canvas.getBoundingClientRect();
+
+const canvasHeight = Math.floor(height);
+const canvasWidth = Math.floor(width);
+
+// this then applies that size to the image data as well so we get 1px per px
+canvas.width = canvasWidth;
+canvas.height = canvasHeight;
+
+const svtLogoScale = Math.floor(canvasWidth / 40);
 console.log({ canvasWidth, canvasHeight });
 
 const offscreenCanvas = new OffscreenCanvas(canvasWidth, canvasHeight);
@@ -70,7 +76,9 @@ function draw() {
   ctx.drawImage(offscreenCanvas, 0, 0); // draw static noise (pun intended)
   ctx.restore();
   ctx.fillStyle = "rgb(0 0 0)";
-  const offset = tick++ % canvasWidth;
+
+  tick = (tick + 1) % canvasWidth;
+  const offset = tick;
 
   ctx.save();
   ctx.translate(offset, 200);
@@ -122,9 +130,8 @@ document.addEventListener("keyup", (e) => {
 
   if (e.key === "c") {
     coloredNoise = !coloredNoise;
-
-    noise(offscreenCtx);
-    noise(offscreenOverlayCtx);
+    noise(offscreenCtx, 1337);
+    noise(offscreenOverlayCtx, 4711);
     drawBackgroundOnly();
   }
 });
