@@ -4,6 +4,11 @@ body {
   height: 100%;
 }
 
+/* html {
+  background: repeating-conic-gradient(#808080 0% 25%, #80808033 0% 50%) 50% /
+    20px 20px;
+} */
+
 #canvas {
   /* background-color: hotpink; */
   width: 100%;

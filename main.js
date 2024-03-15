@@ -1,10 +1,16 @@
 import MersenneTwister from "./mersenne-twister.js";
-import { measurePathWidth } from "./path-width.js";
+import { getContentBoundingRect } from "./path-width.js";
 
+// window.addEventListener("load", () => {
 let shouldAnimate = true;
-let shouldResetScaleOnly = true;
+let overlayMovesWithText = true;
 let coloredNoise = false;
 let tick = 0;
+
+const text = "It's vision is based on movement";
+const fontSize = 350;
+const fontFamily = "sans-serif";
+const font = `${fontSize}px ${fontFamily}`;
 
 const canvasScale = 1;
 
@@ -21,33 +27,155 @@ const canvasWidth = Math.floor(width * canvasScale);
 canvas.width = canvasWidth;
 canvas.height = canvasHeight;
 
-const svtLogoScale = Math.floor(canvasWidth / 40);
-console.log({ canvasWidth, canvasHeight });
+// console.log({ canvasWidth, canvasHeight });
 
-const offscreenCanvas = new OffscreenCanvas(canvasWidth, canvasHeight);
-const offscreenCtx = offscreenCanvas.getContext("2d", { alpha: false });
+const measuringCanvas = new OffscreenCanvas(fontSize * text.length, fontSize);
+const measuringCtx = measuringCanvas.getContext("2d");
 
-const offscreenOverlayCanvas = new OffscreenCanvas(canvasWidth, canvasHeight);
-const offscreenOverlayCtx = offscreenOverlayCanvas.getContext("2d", {
+measuringCtx.font = font;
+measuringCtx.textBaseline = "top";
+measuringCtx.fillText(text, 0, 0);
+
+ctx.font = font;
+ctx.textBaseline = "top";
+
+const {
+  height: contentHeight,
+  width: contentWidth,
+  x: contentX,
+  y: contentY,
+} = getContentBoundingRect(measuringCanvas);
+
+console.log({ contentHeight, contentWidth, contentX, contentY });
+
+const backgroundCanvas = new OffscreenCanvas(canvasWidth, canvasHeight);
+const backgroundCtx = backgroundCanvas.getContext("2d", { alpha: false });
+
+// Couldn't get the static noise to line up perfectly with the text,
+// so this is a bit of a cheat padding it with 1px
+const overlayCanvas = new OffscreenCanvas(
+  Math.ceil(contentWidth) + 1,
+  Math.ceil(contentHeight) + 1
+);
+const overlayCtx = overlayCanvas.getContext("2d", {
   alpha: false,
 });
 
-const idata = offscreenCtx.createImageData(
-  offscreenCanvas.width,
-  offscreenCanvas.height
-);
+noise(backgroundCtx, 1337);
+noise(overlayCtx, 4711);
 
-const svtLogo = new Path2D(
-  "m12.395 2.415-2.17 5.82-2.171-5.82H6.156l3.12 8.364h1.897l3.12-8.364zM1.543 8.304.157 9.309c.538.798 1.62 1.637 3.07 1.637 1.63 0 2.906-1 2.906-2.555 0-1.017-.592-1.791-1.81-2.35-.168-.077-.86-.384-.992-.44-.64-.27-.952-.574-.952-.939s.294-.743.897-.743c.422 0 .808.199 1.179.606l1.317-.956C5.246 2.762 4.27 2.26 3.222 2.26c-1.386 0-2.604.893-2.604 2.395 0 1.044.593 1.852 1.807 2.371l.884.377c.4.171 1.048.44 1.048 1.013s-.566.868-1.178.868c-.552 0-1.135-.349-1.637-.98zm16.283.946c-.405 0-.745-.245-.925-.592-.137-.263-.142-.682-.142-1.038V4.147h1.934l.646-1.733h-2.58V.025h-1.772v7.866c.002.364.022.698.16 1.135a2.83 2.83 0 0 0 2.68 1.92 2.94 2.94 0 0 0 1.985-.78L18.703 8.9c-.234.204-.558.35-.877.35z"
-);
+// ctx.drawImage(backgroundCanvas, -100, -100);
 
-const svtLogoWidth = measurePathWidth(svtLogo, canvas) * svtLogoScale;
-console.log({ svtLogoWidth });
+// DEBUGGING TEXT STUFF
+// ctx.globalCompositeOperation = "source-over";
+
+// const off = 0;
+
+// // ctx.fillStyle = "red";
+// // ctx.fillRect(
+// //   contentX + off,
+// //   canvasHeight / 2 + contentY,
+// //   contentWidth,
+// //   contentHeight
+// // );
+
+// ctx.drawImage(
+//   overlayCanvas,
+//   contentX,
+//   Math.ceil(canvasHeight / 2 - contentHeight / 2 + contentY)
+// );
+
+// ctx.fillStyle = "green";
+
+// // ctx.globalCompositeOperation = "destination-atop";
+// ctx.fillText(text, off, contentY);
+// ctx.fillText(text, off, Math.ceil(canvasHeight / 2 - contentHeight / 2));
+
+// ctx.strokeRect(contentX, contentHeight / 2 - contentY, contentWidth, 0);
+
+// console.log({ contentWidth, contentHeight, contentX, contentY });
+
+function draw() {
+  window.requestAnimationFrame(draw);
+  if (!shouldAnimate) {
+    return;
+  }
+
+  const animationWidth = contentWidth + canvasWidth;
+  tick = (tick - 1 + animationWidth) % animationWidth;
+  const contentOffset = tick - contentWidth;
+
+  ctx.clearRect(0, 0, canvasWidth, canvasHeight); // clear canvas
+
+  ctx.globalCompositeOperation = "source-over";
+
+  if (overlayMovesWithText) {
+    let overlayOffset = contentOffset + contentX;
+    ctx.drawImage(
+      overlayCanvas,
+      overlayOffset,
+      Math.ceil(canvasHeight / 2 - contentHeight / 2 + contentY)
+    );
+  } else {
+    ctx.save();
+    // reuse the background noise, but flip it so it doesn't line up
+    ctx.scale(-1, -1);
+    ctx.translate(-canvasWidth, -canvasHeight);
+    ctx.drawImage(backgroundCanvas, 0, 0);
+    ctx.restore();
+  }
+
+  // draw static noise on text
+
+  ctx.globalCompositeOperation = "destination-atop";
+  ctx.fillStyle = "rgb(255 0 0)";
+  ctx.fillText(
+    text,
+    contentOffset,
+    Math.ceil(canvasHeight / 2 - contentHeight / 2)
+  );
+  ctx.drawImage(backgroundCanvas, 0, 0); // draw static noise background
+  // ctx.fillStyle = "black";
+  // ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+}
+
+function drawBackgroundOnly() {
+  ctx.clearRect(0, 0, canvasWidth, canvasHeight); // clear canvas
+  ctx.drawImage(backgroundCanvas, 0, 0); // draw static noise background
+}
+
+function init() {
+  drawBackgroundOnly();
+  window.requestAnimationFrame(draw);
+}
+
+init();
+
+document.addEventListener("keyup", (e) => {
+  e.preventDefault();
+  if (e.key === " ") {
+    shouldAnimate = !shouldAnimate;
+  }
+
+  if (e.key === "s") {
+    overlayMovesWithText = !overlayMovesWithText;
+  }
+
+  if (e.key === "c") {
+    coloredNoise = !coloredNoise;
+    noise(backgroundCtx, 1337);
+    noise(overlayCtx, 4711);
+    drawBackgroundOnly();
+  }
+});
+
 function noise(ctx, seed = 1337) {
   const generator = new MersenneTwister(seed);
-  for (let x = 0; x < canvasWidth; x++) {
-    for (let y = 0; y < canvasHeight; y++) {
-      const index = (x + y * canvasWidth) * 4;
+  const { height, width } = ctx.canvas;
+  const idata = ctx.createImageData(width, height);
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) {
+      const index = (x + y * width) * 4;
 
       if (coloredNoise) {
         idata.data[index] = generator.random() * 255;
@@ -65,79 +193,4 @@ function noise(ctx, seed = 1337) {
   }
   ctx.putImageData(idata, 0, 0);
 }
-
-noise(offscreenCtx, 1337);
-noise(offscreenOverlayCtx, 4711);
-
-function draw() {
-  window.requestAnimationFrame(draw);
-  if (!shouldAnimate) {
-    return;
-  }
-
-  //   ctx.globalCompositeOperation = "destination-over";
-  ctx.clearRect(0, 0, canvasWidth, canvasHeight); // clear canvas
-  ctx.save();
-  ctx.drawImage(offscreenCanvas, 0, 0); // draw static noise
-  ctx.restore();
-  ctx.fillStyle = "rgb(0 0 0)";
-
-  const animationWidth = svtLogoWidth + canvasWidth;
-  tick = (tick - 1 + animationWidth) % animationWidth;
-  const offset = tick - svtLogoWidth;
-
-  ctx.save();
-  ctx.translate(offset, canvasHeight / 2);
-  ctx.scale(svtLogoScale, svtLogoScale);
-  ctx.clip(svtLogo);
-  if (shouldResetScaleOnly) {
-    ctx.scale(1 / svtLogoScale, 1 / svtLogoScale); // restore all transforms, but keep the clip path
-  } else {
-    ctx.resetTransform(); // restore all transforms, but keep the clip path
-  }
-  ctx.drawImage(offscreenOverlayCanvas, 0, 0); // offset the overlay a bit to avoid some weird artifacts at the top of the t
-  ctx.restore();
-
-  ctx.save();
-  ctx.translate(offset - animationWidth, canvasHeight / 2);
-  ctx.scale(svtLogoScale, svtLogoScale);
-  ctx.clip(svtLogo);
-  if (shouldResetScaleOnly) {
-    ctx.scale(1 / svtLogoScale, 1 / svtLogoScale); // restore all transforms, but keep the clip path
-  } else {
-    ctx.resetTransform(); // restore all transforms, but keep the clip path
-  }
-  ctx.drawImage(offscreenOverlayCanvas, 0, 0); // offset the overlay a bit to avoid some weird artifacts at the top of the t
-  ctx.restore();
-}
-
-function drawBackgroundOnly() {
-  ctx.clearRect(0, 0, canvasWidth, canvasHeight); // clear canvas
-  ctx.save();
-  ctx.drawImage(offscreenCanvas, 0, 0); // draw static noise
-  ctx.restore();
-}
-
-function init() {
-  window.requestAnimationFrame(draw);
-}
-
-init();
-
-document.addEventListener("keyup", (e) => {
-  e.preventDefault();
-  if (e.key === " ") {
-    shouldAnimate = !shouldAnimate;
-  }
-
-  if (e.key === "s") {
-    shouldResetScaleOnly = !shouldResetScaleOnly;
-  }
-
-  if (e.key === "c") {
-    coloredNoise = !coloredNoise;
-    noise(offscreenCtx, 1337);
-    noise(offscreenOverlayCtx, 4711);
-    drawBackgroundOnly();
-  }
-});
+// });
