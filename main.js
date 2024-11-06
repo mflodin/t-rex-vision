@@ -2,15 +2,25 @@ import MersenneTwister from "./mersenne-twister.js";
 import { getContentBoundingRect } from "./path-width.js";
 
 // window.addEventListener("load", () => {
-let shouldAnimate = true;
+let shouldAnimate = false;
 let overlayMovesWithText = true;
 let coloredNoise = false;
+let drawBackgroundNoise = true;
+let drawTextNoise = true;
 let tick = 0;
+let animationSpeed = 1;
 
 const text = "It's vision is based on movement";
 const fontSize = 350;
 const fontFamily = "sans-serif";
 const font = `${fontSize}px ${fontFamily}`;
+
+const KEY_CODE = {
+  LEFT: 37,
+  UP: 38,
+  RIGHT: 39,
+  DOWN: 40,
+};
 
 const canvasScale = 1;
 
@@ -97,12 +107,10 @@ noise(overlayCtx, 4711);
 
 function draw() {
   window.requestAnimationFrame(draw);
-  if (!shouldAnimate) {
-    return;
+  if (shouldAnimate) {
+    const animationWidth = contentWidth + canvasWidth;
+    tick = (tick - 1 * animationSpeed + animationWidth) % animationWidth;
   }
-
-  const animationWidth = contentWidth + canvasWidth;
-  tick = (tick - 1 + animationWidth) % animationWidth;
   const contentOffset = tick - contentWidth;
 
   ctx.clearRect(0, 0, canvasWidth, canvasHeight); // clear canvas
@@ -126,17 +134,26 @@ function draw() {
   }
 
   // draw static noise on text
-
-  ctx.globalCompositeOperation = "destination-atop";
-  ctx.fillStyle = "rgb(255 0 0)";
+  if (drawTextNoise) {
+    ctx.globalCompositeOperation = "destination-atop";
+  } else {
+    ctx.globalCompositeOperation = "source-in";
+  }
+  ctx.fillStyle = "white";
   ctx.fillText(
     text,
     contentOffset,
     Math.ceil(canvasHeight / 2 - contentHeight / 2)
   );
-  ctx.drawImage(backgroundCanvas, 0, 0); // draw static noise background
-  // ctx.fillStyle = "black";
-  // ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+  ctx.globalCompositeOperation = "destination-atop";
+
+  if (drawBackgroundNoise) {
+    ctx.drawImage(backgroundCanvas, 0, 0); // draw static noise background
+  } else {
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+  }
 }
 
 function drawBackgroundOnly() {
@@ -157,15 +174,39 @@ document.addEventListener("keyup", (e) => {
     shouldAnimate = !shouldAnimate;
   }
 
-  if (e.key === "s") {
+  if (e.key === "m") {
     overlayMovesWithText = !overlayMovesWithText;
+  }
+
+  if (e.key === "n") {
+    drawTextNoise = !drawTextNoise;
+  }
+
+  if (e.key === "b") {
+    drawBackgroundNoise = !drawBackgroundNoise;
+  }
+
+  // if (e.keyCode === KEY_CODE.DOWN) {
+  //   console.log("DOWN");
+  // }
+
+  // if (e.keyCode === KEY_CODE.UP) {
+  //   console.log("UP");
+  // }
+
+  if (e.keyCode === KEY_CODE.LEFT) {
+    animationSpeed += 1;
+  }
+
+  if (e.keyCode === KEY_CODE.RIGHT) {
+    animationSpeed -= 1;
   }
 
   if (e.key === "c") {
     coloredNoise = !coloredNoise;
     noise(backgroundCtx, 1337);
     noise(overlayCtx, 4711);
-    drawBackgroundOnly();
+    // drawBackgroundOnly();
   }
 });
 
