@@ -2,7 +2,7 @@ import MersenneTwister from "./mersenne-twister.js";
 import { getContentBoundingRect } from "./path-width.js";
 
 // window.addEventListener("load", () => {
-let shouldAnimate = true;
+let shouldAnimate = false;
 let overlayMovesWithText = true;
 let coloredNoise = false;
 let tick = 0;
@@ -194,3 +194,25 @@ function noise(ctx, seed = 1337) {
   ctx.putImageData(idata, 0, 0);
 }
 // });
+
+const toggleAnimationOnButton = document.getElementById("toggleAnimationOn");
+const toggleAnimationOffButton = document.getElementById("toggleAnimationOff");
+const toggleColorOnButton = document.getElementById("toggleColorOn");
+const toggleColorOffButton = document.getElementById("toggleColorOff");
+
+toggleAnimationOnButton.addEventListener("click", () => {
+  toggleAnimationOnButton.classList.add("hidden");
+  toggleAnimationOffButton.classList.remove("hidden");
+});
+toggleAnimationOffButton.addEventListener("click", () => {
+  toggleAnimationOffButton.classList.add("hidden");
+  toggleAnimationOnButton.classList.remove("hidden");
+});
+toggleColorOnButton.addEventListener("click", () => {
+  toggleColorOnButton.classList.add("hidden");
+  toggleColorOffButton.classList.remove("hidden");
+});
+toggleColorOffButton.addEventListener("click", () => {
+  toggleColorOffButton.classList.add("hidden");
+  toggleColorOnButton.classList.remove("hidden");
+});
