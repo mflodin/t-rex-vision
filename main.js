@@ -10,7 +10,7 @@ let drawTextNoise = true;
 let tick = 0;
 let animationSpeed = 1;
 
-const text = "It's vision is based on movement";
+const text = "Its vision is based on movement";
 const fontSize = 350;
 const fontFamily = "sans-serif";
 const font = `${fontSize}px ${fontFamily}`;
